@@ -102,9 +102,10 @@ WHERE height IS NOT NULL
 ORDER BY height
 LIMIT 1;
 
-
-
 --Eddie Gaedel. Played one game for the Saint Lewis Cardinals.
+
+
+
 
 
 -- 3. Find all players in the database who played at Vanderbilt University. Create a list showing each player’s first and last names as well as the total salary they earned in the major leagues. Sort this list in descending order by the total salary earned. Which Vanderbilt player earned the most money in the majors?
@@ -119,7 +120,7 @@ WHERE LOWER(schoolname) = 'vanderbilt university'
 SELECT
     c.schoolid,
     c.playerid,
-    SUM(s.salary),
+    SUM(s.salary) AS salary,
     p.namefirst,
     p.namelast
 FROM
@@ -136,6 +137,8 @@ ON s.playerid = p.playerid
 WHERE c.schoolid = 'vandy'
 GROUP BY c.schoolid, c.playerid, p.namefirst, p.namelast
 ORDER BY SUM(s.salary) DESC;
+
+--David Price had the highest salary.
 	
 	
 
@@ -153,21 +156,118 @@ FROM fielding
 WHERE yearid = 2016
 GROUP BY position;
 
+--Battery: 41424, Infield: 58934, Outfield 29560
+
+
+
+
 
 -- 5. Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. Do the same for home runs per game. Do you see any trends?
 
+SELECT 
+	FLOOR((yearid / 10) * 10) AS decade,
+    ROUND(AVG(so / g), 2) AS avg_strikeouts_per_game,
+    ROUND(AVG(hr / g), 2) AS avg_home_runs_per_game
+FROM pitching
+WHERE yearid >= 1920
+GROUP BY decade
+ORDER BY decade;
 
   
-1920 -2 
-2010 - 7
+
+
+
+
+
+
 
 -- 6. Find the player who had the most success stealing bases in 2016, where __success__ is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted _at least_ 20 stolen bases.
-stolen bases is FROM batting
-Chris Ellings 91%?
-stolen bases + being caught stealing / both of     them added together stolen bases * 100 / sum of them together
-Persentage and then rank?
 
--- 7.  From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+
+
+SELECT
+    playerid
+FROM (
+    SELECT
+        playerid,
+        SUM(sb) AS successful_attempts,
+        SUM(cs) AS caught_stealing,
+        SUM(sb) + SUM(cs) AS total_attempts
+    FROM batting
+    WHERE yearid = 2016
+    GROUP BY playerid
+    HAVING SUM(sb) + SUM(cs) >= 20
+) AS StolenBaseStats
+ORDER BY (successful_attempts * 1.0 / total_attempts) DESC;
+
+
+--Need to add more info of the player
+
+WITH StolenBaseStats AS (
+    SELECT
+        b.playerid,
+        SUM(b.sb) AS successful_attempts,
+        SUM(b.cs) AS caught_stealing,
+        SUM(b.sb) + SUM(b.cs) AS total_attempts
+    FROM batting AS b
+    WHERE b.yearid = 2016
+    GROUP BY b.playerid
+    HAVING SUM(b.sb) + SUM(b.cs) >= 20
+)
+SELECT p.namefirst, p.namelast
+FROM StolenBaseStats AS s
+JOIN people AS p ON s.playerid = p.playerid
+ORDER BY (s.successful_attempts * 1.0 / s.total_attempts) DESC;
+
+
+--Need to add percentage somehow
+
+WITH StolenBaseStats AS (
+    SELECT
+        b.playerid,
+        SUM(b.sb) AS successful_attempts,
+        SUM(b.cs) AS caught_stealing,
+        SUM(b.sb) + SUM(b.cs) AS total_attempts
+    FROM batting AS b
+    WHERE b.yearid = 2016
+    GROUP BY b.playerid
+    HAVING SUM(b.sb) + SUM(b.cs) >= 20
+)
+SELECT
+    p.namefirst,
+    p.namelast,
+    ROUND((s.successful_attempts * 100.0 / s.total_attempts),2) AS success_percentage
+FROM StolenBaseStats AS s
+JOIN people AS p ON s.playerid = p.playerid
+ORDER BY success_percentage DESC
+LIMIT 1;
+
+--Chris Owings 91%
+
+
+-- 7.  From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. 
+
+SELECT w, l, teamid, yearid,
+CASE 
+	WHEN wswin = 'N' THEN 'No'
+	WHEN wswin = 'Y' THEN 'Yes'
+	END AS world_series
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+ORDER BY w DESC;
+
+
+
+
+
+
+
+--How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+
+
+
+
+
 
 largest did not win -seattle maraners 116 2001
 smallest that did -dogers 1981
