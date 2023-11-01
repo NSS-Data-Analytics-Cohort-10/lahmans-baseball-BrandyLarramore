@@ -168,7 +168,7 @@ SELECT
 	FLOOR((yearid / 10) * 10) AS decade,
     ROUND(AVG(so / g), 2) AS avg_strikeouts_per_game,
     ROUND(AVG(hr / g), 2) AS avg_home_runs_per_game
-FROM pitching
+FROM teams
 WHERE yearid >= 1920
 GROUP BY decade
 ORDER BY decade;
@@ -247,32 +247,61 @@ LIMIT 1;
 
 -- 7.  From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. 
 
-SELECT w, l, teamid, yearid,
-CASE 
-	WHEN wswin = 'N' THEN 'No'
-	WHEN wswin = 'Y' THEN 'Yes'
-	END AS world_series
+SELECT w, l, wswin, teamid, yearid
 FROM teams
 WHERE yearid BETWEEN 1970 AND 2016
+	AND wswin = 'N'
 ORDER BY w DESC;
 
+SELECT w, l, wswin, teamid, yearid
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+	AND wswin = 'Y'
+ORDER BY w;
 
+--Take out 1981
 
+SELECT w, l, wswin, teamid, yearid
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+	AND wswin = 'N'
+ORDER BY w DESC;
 
-
+SELECT w, l, wswin, teamid, yearid
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+	AND wswin = 'Y'
+	AND yearid != 1981
+ORDER BY w;
 
 
 --How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
 
 
+WITH cte AS (SELECT yearid, (MAX(w))AS maxw
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016 AND yearid NOT IN (1981)
+GROUP BY yearid
+ORDER BY yearid DESC),
 
-
-
-
-largest did not win -seattle maraners 116 2001
-smallest that did -dogers 1981
-
-2006 cardinals?
+cte2 AS (SELECT teamid, yearid, w, wswin
+		FROM teams
+		WHERE yearid BETWEEN 1978 AND 2016 AND yearid NOT IN (1981)
+		ORDER BY w DESC)
+SELECT
+SUM(CASE WHEN wswin='Y'
+	THEN 1 
+	ELSE 0 
+	END) AS total_wins,
+COUNT(DISTINCT cte.yearid),
+ROUND(SUM(CASE WHEN wswin = 'Y' 
+	THEN 1 
+	ELSE 0 
+	END)/COUNT(DISTINCT cte.yearid)::numeric, 2)*100
+FROM cte2
+LEFT JOIN cte
+ON cte.yearid=cte2.yearid AND cte2.w=cte.maxw
+WHERE cte.maxw IS NOT NULL;
 
 
 -- 8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
@@ -280,11 +309,29 @@ smallest that did -dogers 1981
 
 
 
-
-
 -- 9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 
-
+SELECT p.namefirst, p.namelast,
+		a.lgid, 
+		t.name AS team_name,
+		a.yearid
+FROM awardsmanagers AS a
+LEFT JOIN people AS p
+USING (playerid)
+LEFT JOIN managers AS m
+USING (yearid,lgid) 
+LEFT JOIN teams AS t
+USING (teamid, yearid)
+WHERE a.playerid IN (
+		SELECT playerid
+		FROM awardsmanagers
+		WHERE awardid= 'TSN Manager of the Year'
+		GROUP BY playerid
+		HAVING COUNT(DISTINCT lgid) >1)
+AND a.lgid<> 'AL'
+AND a.playerid = m.playerid
+GROUP BY p.namefirst,p.namelast,a.lgid,a.yearid,t.name
+ORDER BY p.namefirst;
 
 
 
