@@ -105,9 +105,6 @@ LIMIT 1;
 --Eddie Gaedel. Played one game for the Saint Lewis Cardinals.
 
 
-
-
-
 -- 3. Find all players in the database who played at Vanderbilt University. Create a list showing each player’s first and last names as well as the total salary they earned in the major leagues. Sort this list in descending order by the total salary earned. Which Vanderbilt player earned the most money in the majors?
 
 SELECT schoolname, schoolid
@@ -159,9 +156,6 @@ GROUP BY position;
 --Battery: 41424, Infield: 58934, Outfield 29560
 
 
-
-
-
 -- 5. Find the average number of strikeouts per game by decade since 1920. Round the numbers you report to 2 decimal places. Do the same for home runs per game. Do you see any trends?
 
 SELECT 
@@ -174,10 +168,7 @@ GROUP BY decade
 ORDER BY decade;
 
   
-
-
-
-
+--not sure if that is the correct table to pull from
 
 
 
@@ -306,36 +297,47 @@ WHERE cte.maxw IS NOT NULL;
 
 -- 8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
 
+SELECT park_name, team, year,
+SUM(attendance)/SUM(games) AS average_attendance
+FROM homegames
+INNER JOIN parks
+USING(park)
+WHERE year = '2016' AND games >= 10
+GROUP BY team, year, park_name
+ORDER BY average_attendance DESC
+LIMIT 5;
+
+SELECT park_name, team, year,
+SUM(attendance) / SUM(games) AS average_attendance
+FROM homegames
+INNER JOIN parks
+USING(park)
+WHERE year = '2016' AND games >= 10
+GROUP BY team, year, park_name
+ORDER BY average_attendance ASC
+LIMIT 5;
 
 
 
 -- 9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 
-SELECT p.namefirst, p.namelast,
-		a.lgid, 
-		t.name AS team_name,
-		a.yearid
-FROM awardsmanagers AS a
-LEFT JOIN people AS p
+SELECT DISTINCT(p.namefirst), p.namelast, teamid
+FROM awardsmanagers AS am1
+INNER JOIN awardsmanagers AS am2
 USING (playerid)
-LEFT JOIN managers AS m
-USING (yearid,lgid) 
-LEFT JOIN teams AS t
-USING (teamid, yearid)
-WHERE a.playerid IN (
-		SELECT playerid
-		FROM awardsmanagers
-		WHERE awardid= 'TSN Manager of the Year'
-		GROUP BY playerid
-		HAVING COUNT(DISTINCT lgid) >1)
-AND a.lgid<> 'AL'
-AND a.playerid = m.playerid
-GROUP BY p.namefirst,p.namelast,a.lgid,a.yearid,t.name
-ORDER BY p.namefirst;
-
+INNER JOIN people AS p
+USING (playerid)
+INNER JOIN managers AS m
+USING (playerid)
+WHERE am1.awardid = 'TSN Manager of the Year'
+AND am2.awardid = 'TSN Manager of the Year'
+AND ((am1.lgid = 'AL' AND am2.lgid = 'NL') 
+OR (am1.lgid = 'NL' AND am2.lgid = 'AL'))
+AND (m.yearid = am1.yearid);
 
 
 -- 10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+
 
 
 -- **Open-ended questions**
